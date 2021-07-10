@@ -81,7 +81,6 @@ where
     actix_service::forward_ready!(service);
 
     fn call(&self, req: Req) -> Self::Future {
-        println!("executing dummy middleware");
         Either::Left(self.service.call(req))
     }
 }
@@ -183,7 +182,6 @@ where
     }
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        println!("executing group middleware");
         match self {
             Self::Real(val) => {
                 let val = Rc::clone(val);
