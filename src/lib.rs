@@ -29,7 +29,7 @@
 //!                .header("Permissions-Policy", "interest-cohort=()"
 //!         )))
 //!     } else {
-//!         Group::Dummy(Rc::new(Dummy))
+//!         Group::default()
 //!     }
 //! }
 //! ```
@@ -97,6 +97,16 @@ where
     Dummy(Rc<D>),
     Real(Rc<R>),
     Ph(PhantomData<Ser>),
+}
+
+impl<R, Ser> Default for Group<Dummy, R, Ser>
+where
+    R: Transform<Ser, ServiceRequest>,
+    Ser: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+{
+    fn default() -> Self {
+        Self::Dummy(Rc::new(Dummy))
+    }
 }
 
 // D is dummy
