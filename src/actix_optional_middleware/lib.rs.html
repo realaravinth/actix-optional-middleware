@@ -191,6 +191,16 @@
 <span id="188">188</span>
 <span id="189">189</span>
 <span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
 * Copyright (C) 2021  Aravinth Manivannan &lt;realaravinth@batsense.net&gt;
@@ -223,7 +233,7 @@
 <span class="doccomment">//!                .header(&quot;Permissions-Policy&quot;, &quot;interest-cohort=()&quot;</span>
 <span class="doccomment">//!         )))</span>
 <span class="doccomment">//!     } else {</span>
-<span class="doccomment">//!         Group::Dummy(Rc::new(Dummy))</span>
+<span class="doccomment">//!         Group::default()</span>
 <span class="doccomment">//!     }</span>
 <span class="doccomment">//! }</span>
 <span class="doccomment">//! ```</span>
@@ -291,6 +301,16 @@
     <span class="ident">Dummy</span>(<span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>),
     <span class="ident">Real</span>(<span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>),
     <span class="ident">Ph</span>(<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">Ser</span><span class="op">&gt;</span>),
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">Ser</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Group</span><span class="op">&lt;</span><span class="ident">Dummy</span>, <span class="ident">R</span>, <span class="ident">Ser</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">R</span>: <span class="ident">Transform</span><span class="op">&lt;</span><span class="ident">Ser</span>, <span class="ident">ServiceRequest</span><span class="op">&gt;</span>,
+    <span class="ident">Ser</span>: <span class="ident">Service</span><span class="op">&lt;</span><span class="ident">ServiceRequest</span>, <span class="ident">Response</span> <span class="op">=</span> <span class="ident">ServiceResponse</span><span class="op">&lt;</span><span class="ident">AnyBody</span><span class="op">&gt;</span>, <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+{
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span><span class="ident">::Dummy</span>(<span class="ident">Rc::new</span>(<span class="ident">Dummy</span>))
+    }
 }
 
 <span class="comment">// D is dummy</span>
