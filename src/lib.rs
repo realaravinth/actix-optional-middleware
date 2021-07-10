@@ -1,20 +1,41 @@
-use std::marker::PhantomData;
 /*
 * Copyright (C) 2021  Aravinth Manivannan <realaravinth@batsense.net>
 *
-* This program is free software: you can redistribute it and/or modify
-* it under the terms of the GNU Affero General Public License as
-* published by the Free Software Foundation, either version 3 of the
-* License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU Affero General Public License for more details.
-*
-* You should have received a copy of the GNU Affero General Public License
-* along with this program.  If not, see <https://www.gnu.org/licenses/>.
+* Use of this source code is governed by the Apache 2.0 and/or the MIT
+* License.
 */
+//! ```rust
+//! use std::rc::Rc;
+//!
+//! use actix_optional_middleware::{Group, Dummy};
+//! use actix_web::dev::{AnyBody, Service, ServiceRequest, ServiceResponse, Transform};
+//! use actix_web::middleware::DefaultHeaders;
+//! use actix_web::{web, App, Error, HttpServer, Responder, get};
+//!
+//!#[get("/test", wrap = "get_group_middleware()")]
+//! async fn h1() -> impl Responder {
+//!     "Handler 1"
+//! }
+//!
+//! // flip this value to see dummy in action
+//! const ACTIVE: bool = true;
+//!
+//! fn get_group_middleware<S>() -> Group<Dummy, DefaultHeaders, S>
+//! where
+//!     S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+//! {
+//!     if ACTIVE {
+//!         Group::Real(Rc::new(DefaultHeaders::new()
+//!                .header("Permissions-Policy", "interest-cohort=()"
+//!         )))
+//!     } else {
+//!         Group::Dummy(Rc::new(Dummy))
+//!     }
+//! }
+//! ```
+
+#![allow(clippy::type_complexity)]
+use std::marker::PhantomData;
 use std::rc::Rc;
 
 use actix_http::body::AnyBody;
@@ -76,12 +97,9 @@ where
 // R is real
 pub enum GroupMiddleware<D, R>
 where
-    //    S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
-    //    S::Future: 'static,
     D: Service<ServiceRequest>,
     R: Service<ServiceRequest>,
 {
-    //, SS, A: Service<SS> + GetService> {
     Dummy(Rc<D>),
     Real(Rc<R>),
 }
@@ -93,15 +111,6 @@ where
     R: Transform<S, ServiceRequest, Transform = RS, InitError = (), Error = Error> + 'static,
     DS: Service<ServiceRequest, Error = Error, Response = ServiceResponse> + 'static,
     RS: Service<ServiceRequest, Error = Error, Response = ServiceResponse> + 'static,
-    //Combined: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
-    //Combined::Future: 'static,
-    //Rand: Transform<
-    //        Combined,
-    //        ServiceRequest,
-    //        Response = ServiceResponse,
-    //        Transform = Combined,
-    //        InitError = (),
-    //    > + 'static,
 {
     type Response = ServiceResponse<AnyBody>;
     type Error = Error;
@@ -112,7 +121,7 @@ where
     fn new_transform(&self, service: S) -> Self::Future {
         match self {
             Self::Real(val) => {
-                let val = Rc::clone(&val);
+                let val = Rc::clone(val);
                 Box::pin(async move {
                     match val.new_transform(service).await {
                         Ok(val) => Ok(GroupMiddleware::Real(Rc::new(val))),
@@ -122,7 +131,7 @@ where
             }
 
             Self::Dummy(val) => {
-                let val = Rc::clone(&val);
+                let val = Rc::clone(val);
                 Box::pin(async move {
                     match val.new_transform(service).await {
                         Ok(val) => Ok(GroupMiddleware::Dummy(Rc::new(val))),
@@ -140,8 +149,6 @@ impl<D, R> Service<ServiceRequest> for GroupMiddleware<D, R>
 where
     D: Service<ServiceRequest, Error = Error, Response = ServiceResponse> + 'static,
     R: Service<ServiceRequest, Error = Error, Response = ServiceResponse> + 'static,
-    //    S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
-    //    S::Future: 'static,
 {
     type Response = ServiceResponse<AnyBody>;
     type Error = Error;
@@ -154,6 +161,7 @@ where
         match self {
             Self::Real(val) => val.poll_ready(cx),
             Self::Dummy(val) => val.poll_ready(cx),
+            #[allow(unreachable_patterns)]
             _ => panic!(),
         }
     }
@@ -169,6 +177,7 @@ where
                 let val = Rc::clone(val);
                 Box::pin(async move { val.call(req).await })
             }
+            #[allow(unreachable_patterns)]
             _ => panic!(),
         }
     }
