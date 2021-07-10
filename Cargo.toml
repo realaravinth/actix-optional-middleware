@@ -1,0 +1,18 @@
+[package]
+name = "actix-optional-middleware"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.0.0-beta.8"
+actix-service = "2.0"
+futures = "*"
+actix-cors = "0.6.0-beta.2"
+actix-http = "3.0.0-beta.8"
+actix-identity = "0.4.0-beta.2"
+
+[dev-dependencies]
+actix-rt = "2"
+my-codegen = {package = "actix-web-codegen", git ="https://github.com/realaravinth/actix-web"}
