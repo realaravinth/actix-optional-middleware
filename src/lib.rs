@@ -45,6 +45,7 @@ use actix_web::Error;
 
 use futures::future::{ok, Either, LocalBoxFuture, Ready};
 
+/// Dummy Middleware: it simply forwards the request without operating on it
 pub struct Dummy;
 
 impl<S> Transform<S, ServiceRequest> for Dummy
@@ -62,6 +63,8 @@ where
         ok(DummyMiddleware { service })
     }
 }
+
+/// Dummy Middleware: it simply forwards the request without operating on it
 pub struct DummyMiddleware<S> {
     service: S,
 }
@@ -83,6 +86,9 @@ where
     }
 }
 
+/// Colletion datatype that encapsulates dummy and real middlewares
+///
+/// The appropriate middleware is executed based on the variant chosen
 pub enum Group<D, R, Ser>
 where
     D: Transform<Ser, ServiceRequest>,
