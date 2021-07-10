@@ -196,3 +196,83 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use actix_web::middleware::DefaultHeaders;
+    use actix_web::Responder;
+    use actix_web::{http, test, App};
+
+    const ENABLED: &str = "/enabled";
+    const DISABLED: &str = "/disabled";
+    const DEFAULT_HEADER: (&str, &str) = ("Permissions-Policy", "interest-cohort=()");
+
+    #[my_codegen::get(path = "ENABLED", wrap = "get_enabled()")]
+    async fn enabled() -> impl Responder {
+        "Enabled"
+    }
+
+    #[my_codegen::get(path = "DISABLED", wrap = "get_disabled()")]
+    async fn disabled() -> impl Responder {
+        "Disabled"
+    }
+
+    fn get_enabled<S>() -> Group<Dummy, DefaultHeaders, S>
+    where
+        S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+    {
+        get_group_middleware(true)
+    }
+
+    fn get_disabled<S>() -> Group<Dummy, DefaultHeaders, S>
+    where
+        S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+    {
+        get_group_middleware(false)
+    }
+
+    fn get_group_middleware<S>(active: bool) -> Group<Dummy, DefaultHeaders, S>
+    where
+        S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+    {
+        if active {
+            Group::Real(Rc::new(
+                DefaultHeaders::new().header(DEFAULT_HEADER.0, DEFAULT_HEADER.1),
+            ))
+        } else {
+            Group::default()
+        }
+    }
+
+    fn service(cfg: &mut actix_web::web::ServiceConfig) {
+        cfg.service(enabled);
+        cfg.service(disabled);
+    }
+    #[actix_rt::test]
+    async fn test() {
+        let mut app = test::init_service(App::new().configure(service)).await;
+
+        // test enabled
+        let resp =
+            test::call_service(&mut app, test::TestRequest::get().uri(ENABLED).to_request()).await;
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert!(resp
+            .headers()
+            .iter()
+            .any(|(k, v)| k == DEFAULT_HEADER.0 && v == DEFAULT_HEADER.1));
+
+        // test disabled
+        let resp = test::call_service(
+            &mut app,
+            test::TestRequest::get().uri(DISABLED).to_request(),
+        )
+        .await;
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert!(!resp
+            .headers()
+            .iter()
+            .any(|(k, v)| k == DEFAULT_HEADER.0 && v == DEFAULT_HEADER.1))
+    }
+}
