@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["actix_optional_middleware"];
