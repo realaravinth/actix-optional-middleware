@@ -95,7 +95,7 @@ where
 {
     Dummy(Rc<D>),
     Real(Rc<R>),
-    Ph(PhantomData<Ser>),
+    __(PhantomData<Ser>),
 }
 
 impl<R, Ser> Default for Group<Dummy, R, Ser>
@@ -252,11 +252,11 @@ mod tests {
     }
     #[actix_rt::test]
     async fn test() {
-        let mut app = test::init_service(App::new().configure(service)).await;
+        let app = test::init_service(App::new().configure(service)).await;
 
         // test enabled
         let resp =
-            test::call_service(&mut app, test::TestRequest::get().uri(ENABLED).to_request()).await;
+            test::call_service(&app, test::TestRequest::get().uri(ENABLED).to_request()).await;
         assert_eq!(resp.status(), http::StatusCode::OK);
         assert!(resp
             .headers()
@@ -264,11 +264,8 @@ mod tests {
             .any(|(k, v)| k == DEFAULT_HEADER.0 && v == DEFAULT_HEADER.1));
 
         // test disabled
-        let resp = test::call_service(
-            &mut app,
-            test::TestRequest::get().uri(DISABLED).to_request(),
-        )
-        .await;
+        let resp =
+            test::call_service(&app, test::TestRequest::get().uri(DISABLED).to_request()).await;
         assert_eq!(resp.status(), http::StatusCode::OK);
         assert!(!resp
             .headers()
