@@ -8,9 +8,9 @@
 //! use std::rc::Rc;
 //!
 //! use actix_optional_middleware::{Group, Dummy};
-//! use actix_web::dev::{AnyBody, Service, ServiceRequest, ServiceResponse, Transform};
+//! use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 //! use actix_web::middleware::DefaultHeaders;
-//! use actix_web::{web, App, Error, HttpServer, Responder, get};
+//! use actix_web::{web, body::BoxBody, App, Error, HttpServer, Responder, get};
 //!
 //!#[get("/test", wrap = "get_group_middleware()")]
 //! async fn h1() -> impl Responder {
@@ -22,7 +22,7 @@
 //!
 //! fn get_group_middleware<S>() -> Group<Dummy, DefaultHeaders, S>
 //! where
-//!     S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+//!     S: Service<ServiceRequest, Response = ServiceResponse<BoxBody>, Error = Error> + 'static,
 //! {
 //!     if ACTIVE {
 //!         Group::Real(Rc::new(DefaultHeaders::new()
@@ -38,7 +38,7 @@
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use actix_http::body::AnyBody;
+use actix_http::body::BoxBody;
 use actix_service::{Service, Transform};
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::Error;
@@ -50,10 +50,10 @@ pub struct Dummy;
 
 impl<S> Transform<S, ServiceRequest> for Dummy
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<BoxBody>, Error = Error>,
     S::Future: 'static,
 {
-    type Response = ServiceResponse<AnyBody>;
+    type Response = ServiceResponse<BoxBody>;
     type Error = Error;
     type Transform = DummyMiddleware<S>;
     type InitError = ();
@@ -71,10 +71,10 @@ pub struct DummyMiddleware<S> {
 
 impl<S, Req> Service<Req> for DummyMiddleware<S>
 where
-    S: Service<Req, Response = ServiceResponse<AnyBody>, Error = Error>,
+    S: Service<Req, Response = ServiceResponse<BoxBody>, Error = Error>,
     S::Future: 'static,
 {
-    type Response = ServiceResponse<AnyBody>;
+    type Response = ServiceResponse<BoxBody>;
     type Future = Either<S::Future, Ready<Result<Self::Response, Self::Error>>>;
     type Error = Error;
 
@@ -85,7 +85,7 @@ where
     }
 }
 
-/// Colletion datatype that encapsulates dummy and real middlewares
+/// Collection datatype that encapsulates dummy and real middlewares
 ///
 /// The appropriate middleware is executed based on the variant chosen
 pub enum Group<D, R, Ser>
@@ -101,7 +101,7 @@ where
 impl<R, Ser> Default for Group<Dummy, R, Ser>
 where
     R: Transform<Ser, ServiceRequest>,
-    Ser: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+    Ser: Service<ServiceRequest, Response = ServiceResponse<BoxBody>, Error = Error> + 'static,
 {
     fn default() -> Self {
         Self::Dummy(Rc::new(Dummy))
@@ -121,13 +121,13 @@ where
 
 impl<D, R, S, DS, RS> Transform<S, ServiceRequest> for Group<D, R, S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<BoxBody>, Error = Error> + 'static,
     D: Transform<S, ServiceRequest, Transform = DS, InitError = (), Error = Error> + 'static,
     R: Transform<S, ServiceRequest, Transform = RS, InitError = (), Error = Error> + 'static,
     DS: Service<ServiceRequest, Error = Error, Response = ServiceResponse> + 'static,
     RS: Service<ServiceRequest, Error = Error, Response = ServiceResponse> + 'static,
 {
-    type Response = ServiceResponse<AnyBody>;
+    type Response = ServiceResponse<BoxBody>;
     type Error = Error;
     type Transform = GroupMiddleware<DS, RS>;
     type InitError = ();
@@ -165,7 +165,7 @@ where
     D: Service<ServiceRequest, Error = Error, Response = ServiceResponse> + 'static,
     R: Service<ServiceRequest, Error = Error, Response = ServiceResponse> + 'static,
 {
-    type Response = ServiceResponse<AnyBody>;
+    type Response = ServiceResponse<BoxBody>;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
@@ -221,21 +221,21 @@ mod tests {
 
     fn get_enabled<S>() -> Group<Dummy, DefaultHeaders, S>
     where
-        S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+        S: Service<ServiceRequest, Response = ServiceResponse<BoxBody>, Error = Error> + 'static,
     {
         get_group_middleware(true)
     }
 
     fn get_disabled<S>() -> Group<Dummy, DefaultHeaders, S>
     where
-        S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+        S: Service<ServiceRequest, Response = ServiceResponse<BoxBody>, Error = Error> + 'static,
     {
         get_group_middleware(false)
     }
 
     fn get_group_middleware<S>(active: bool) -> Group<Dummy, DefaultHeaders, S>
     where
-        S: Service<ServiceRequest, Response = ServiceResponse<AnyBody>, Error = Error> + 'static,
+        S: Service<ServiceRequest, Response = ServiceResponse<BoxBody>, Error = Error> + 'static,
     {
         if active {
             Group::Real(Rc::new(
